@@ -1,3 +1,9 @@
+<script setup>
+import { useCartStore } from '../stores/cart'
+
+const cart = useCartStore()
+</script>
+
 <template>
   <header class="bg-white shadow-sm">
     <nav class="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
@@ -68,7 +74,8 @@
           Connexion
         </button>
 
-        <button
+        <RouterLink
+          to="/panier"
           class="relative rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
         >
           🛒
@@ -76,9 +83,9 @@
           <span
             class="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs text-white"
           >
-            0
+            {{ cart.totalItems }}
           </span>
-        </button>
+        </RouterLink>
 
       </div>
 

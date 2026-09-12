@@ -62,6 +62,7 @@ defineProps({
         <button
           v-if="product.availableForSale"
           class="flex-1 rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white hover:bg-blue-700"
+          @click="cart.addToCart(product)"
         >
           Acheter
         </button>

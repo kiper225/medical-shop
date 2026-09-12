@@ -2,8 +2,10 @@
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { products } from '../data/products'
+import { useCartStore } from '../stores/cart'
 
 const route = useRoute()
+const cart = useCartStore()
 
 const productId = Number(route.params.id)
 
@@ -98,10 +100,11 @@ const product = computed(() => {
           <div class="mt-8 flex flex-col gap-4 sm:flex-row">
 
             <button
-              v-if="product.availableForSale"
-              class="rounded-lg bg-blue-600 px-6 py-4 font-semibold text-white hover:bg-blue-700"
+            v-if="product.availableForSale"
+            @click="cart.addToCart(product)"
+            class="rounded-lg bg-blue-600 px-6 py-4 font-semibold text-white hover:bg-blue-700"
             >
-              🛒 Ajouter au panier
+            🛒 Ajouter au panier
             </button>
 
             <button
