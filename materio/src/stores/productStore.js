@@ -1,9 +1,9 @@
 import { defineStore } from 'pinia'
-import { products as initialProducts } from '@/data/products'
+import api from '@/services/api'
 
 export const useProductStore = defineStore('products', {
   state: () => ({
-    products: [...initialProducts],
+    products: [],
 
     loading: false,
 

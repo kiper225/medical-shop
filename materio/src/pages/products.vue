@@ -93,26 +93,28 @@ const closeForm = () => {
 |--------------------------------------------------------------------------
 */
 
-const handleSaved = productData => {
-  const product = {
-    ...productData,
-
-    status: productData.stock <= 3
-      ? 'Low Stock'
-      : 'Available',
-  }
+const handleSaved = async productData => {
+  let result = null
 
   if (selectedProduct.value) {
-    productStore.updateProduct(
+    result = await productStore.updateProduct(
       selectedProduct.value.id,
-      product,
+      productData,
     )
   } else {
-    productStore.addProduct(product)
+    result = await productStore.addProduct(productData)
   }
 
-  console.log('Produit reçu :', productData)
-  console.log('Image sélectionnée :', productData.imageFile)
+  if (!result) {
+    console.error(
+      'Erreur lors de l’enregistrement du produit',
+      productStore.error,
+    )
+
+    return
+  }
+
+  console.log('Produit enregistré :', result)
 
   closeForm()
 }

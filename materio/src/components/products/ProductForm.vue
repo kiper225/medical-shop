@@ -13,6 +13,8 @@ const emit = defineEmits([
   'cancel',
 ])
 
+const API_URL = 'http://127.0.0.1:8000'
+
 const categories = [
   'Diagnostic',
   'Oxygen Therapy',
@@ -42,7 +44,6 @@ function createEmptyForm() {
     reference: '',
     category: '',
     brand: '',
-    image: null,
     price: null,
     rentalPrice: null,
     stock: 0,
@@ -52,6 +53,27 @@ function createEmptyForm() {
     installationRequired: false,
     maintenanceRequired: false,
   }
+}
+
+/**
+ * Convertit le chemin d'image Laravel
+ * en URL complète.
+ */
+function getImageUrl(image) {
+  if (!image) {
+    return null
+  }
+
+  // Si Laravel renvoie déjà une URL complète
+  if (
+    image.startsWith('http://') ||
+    image.startsWith('https://') ||
+    image.startsWith('blob:')
+  ) {
+    return image
+  }
+
+  return `${API_URL}/storage/${image}`
 }
 
 /**
@@ -81,9 +103,11 @@ function resetFileInput() {
  */
 function loadProduct(product) {
   clearImage()
+  resetFileInput()
 
   if (!product) {
     form.value = createEmptyForm()
+
     return
   }
 
@@ -92,31 +116,49 @@ function loadProduct(product) {
     reference: product.reference ?? '',
     category: product.category ?? '',
     brand: product.brand ?? '',
-    image: product.image ?? null,
+
     price: product.price ?? null,
-    rentalPrice: product.rentalPrice ?? null,
+
+    // Laravel utilise rental_price
+    rentalPrice: product.rental_price ?? product.rentalPrice ?? null,
+
     stock: product.stock ?? 0,
+
     condition: product.condition ?? 'New',
-    saleAvailable: product.saleAvailable ?? true,
-    rentalAvailable: product.rentalAvailable ?? false,
-    installationRequired: product.installationRequired ?? false,
-    maintenanceRequired: product.maintenanceRequired ?? false,
+
+    // Laravel utilise sale_available
+    saleAvailable:
+      product.sale_available ??
+      product.saleAvailable ??
+      true,
+
+    rentalAvailable:
+      product.rental_available ??
+      product.rentalAvailable ??
+      false,
+
+    installationRequired:
+      product.installation_required ??
+      product.installationRequired ??
+      false,
+
+    maintenanceRequired:
+      product.maintenance_required ??
+      product.maintenanceRequired ??
+      false,
   }
 
-  // ⭐ Important : récupérer l'image existante
+  // Affiche l'image déjà enregistrée
   if (product.image) {
-    imagePreview.value = product.image
+    imagePreview.value = getImageUrl(product.image)
   }
 }
 
-/**
- * IMPORTANT :
- * Le watch est placé après les fonctions
- * utilisées par loadProduct().
- */
 watch(
   () => props.product,
-  product => loadProduct(product),
+  product => {
+    loadProduct(product)
+  },
   {
     immediate: true,
   },
@@ -143,9 +185,6 @@ const handleImageChange = event => {
     return
   }
 
-  /*
-   * Vérification du format.
-   */
   const allowedTypes = [
     'image/jpeg',
     'image/png',
@@ -161,9 +200,6 @@ const handleImageChange = event => {
     return
   }
 
-  /*
-   * Limite de 5 Mo.
-   */
   const maxSize = 5 * 1024 * 1024
 
   if (file.size > maxSize) {
@@ -175,19 +211,12 @@ const handleImageChange = event => {
     return
   }
 
-  /*
-   * Libère l'ancien aperçu.
-   */
   if (imagePreview.value?.startsWith('blob:')) {
     URL.revokeObjectURL(imagePreview.value)
   }
 
-    imageFile.value = file
-
-    imagePreview.value = URL.createObjectURL(file)
-
-    // On garde temporairement l'aperçu comme image
-    form.value.image = imagePreview.value
+  imageFile.value = file
+  imagePreview.value = URL.createObjectURL(file)
 }
 
 /**
@@ -196,13 +225,15 @@ const handleImageChange = event => {
 const removeImage = () => {
   clearImage()
 
-  form.value.image = null
-
   resetFileInput()
 }
 
 /**
  * Enregistrement du produit.
+ *
+ * IMPORTANT :
+ * On n'envoie image que si une nouvelle image
+ * a réellement été sélectionnée.
  */
 const saveProduct = () => {
   if (
@@ -213,16 +244,44 @@ const saveProduct = () => {
     return
   }
 
-  emit('saved', {
-    ...form.value,
+  const productData = {
+    name: form.value.name,
+    reference: form.value.reference,
+    category: form.value.category,
+    brand: form.value.brand,
 
-    // Nouvelle image seulement si l'utilisateur en a choisi une
-    imageFile: imageFile.value,
-  })
+    price: form.value.price,
+    rental_price: form.value.rentalPrice,
+
+    stock: form.value.stock,
+    condition: form.value.condition,
+
+    sale_available: form.value.saleAvailable,
+    rental_available: form.value.rentalAvailable,
+
+    installation_required:
+      form.value.installationRequired,
+
+    maintenance_required:
+      form.value.maintenanceRequired,
+  }
+
+  // ⭐ Très important :
+  // on envoie seulement le nouveau fichier.
+  //
+  // Si l'utilisateur modifie le produit sans choisir
+  // une nouvelle image, imageFile reste null.
+  //
+  // Laravel conservera donc l'ancienne image.
+  if (imageFile.value) {
+    productData.image = imageFile.value
+  }
+
+  emit('saved', productData)
 }
 
 /**
- * Nettoyage lors de la destruction du composant.
+ * Nettoyage lors de la destruction.
  */
 onBeforeUnmount(() => {
   clearImage()
